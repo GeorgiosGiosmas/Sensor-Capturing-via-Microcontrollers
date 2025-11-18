@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename resource &apos;Sensor_Capturing_via_Microcontrollers/Core/Inc/main_custom.c&apos; to &apos;main_custom.h&apos;" description="Rename resource &apos;main_custom.c&apos;" flags="7" id="org.eclipse.ltk.core.refactoring.rename.resource" input="Core/Inc/main_custom.c" name="main_custom.h" stamp="1763458438066" updateReferences="true"/>
+</session>

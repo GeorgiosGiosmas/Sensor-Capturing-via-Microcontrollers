@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
+	<item key="replaceBarOpen" value="false"/>
+	<list key="searchhistory">
+		<item value="xTaskNotifyWait"/>
+		<item value="HAL_TIM_PeriodElapsedCallback"/>
+		<item value="configASSERT"/>
+		<item value="assert"/>
+		<item value="tskIDLE_PRIORITY"/>
+		<item value="ADC_channels"/>
+		<item value="ADC_Resolution"/>
+		<item value="ADC_ClockPrescaler"/>
+		<item value="HAL_IncTick"/>
+	</list>
+</section>
