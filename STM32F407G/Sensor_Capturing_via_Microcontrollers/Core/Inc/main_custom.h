@@ -9,8 +9,13 @@
 #ifndef INC_MAIN_H_
 #define INC_MAIN_H_
 
+#include <string.h>
+#include <stdint.h>
+#include <stdio.h>
 #include "stm32f4xx_hal.h"
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 /*
  *	@brief	This is a custom enumeration for the return status
  */
@@ -53,9 +58,27 @@ ReturnStatus ADC_Config(ADC_HandleTypeDef *adc_handle, ADC_TypeDef *adc_instance
 ReturnStatus USART1_Config(UART_HandleTypeDef *uart_handle);
 
 /*
+ * @brief This function configures the I2C module.
+ */
+ReturnStatus I2C_Config(I2C_HandleTypeDef *i2c, I2C_TypeDef *Instance);
+
+/*
+ * @brief This function configures the DMA module.
+ */
+ReturnStatus DMA_Config(DMA_HandleTypeDef *dma, DMA_Stream_TypeDef *Instance);
+
+/*
  * @brief This function configures the TIMER2 module in PWM mode.
  */
 ReturnStatus TIM2_Config(TIM_HandleTypeDef *timer);
+
+/*
+ * @brief Task functions of our Application.
+ */
+TaskFunction_t Capture_Temp_Sensor_Value_Task(void * pvParameters);
+TaskFunction_t Capture_Potensiometer_Value_Task(void * pvParameters);
+TaskFunction_t Transmit_Temp_Sensor_Value_Task(void * pvParameters);
+TaskFunction_t Transmit_Potensiometer_Value_Task(void * pvParameters);
 
 /*
  * @brief This function implements delay in ms with the DWT module(Debugging and profiling feature in Arm Cortex-M processors, measures CPU cycles).

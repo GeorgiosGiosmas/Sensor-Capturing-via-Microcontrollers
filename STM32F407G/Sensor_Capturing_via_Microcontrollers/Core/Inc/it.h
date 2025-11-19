@@ -9,6 +9,6 @@
 #define INC_IT_H_
 
 #include "stm32f4xx_hal.h"
-#include "main.h"
+#include "main_custom.h"
 
 #endif /* INC_IT_H_ */

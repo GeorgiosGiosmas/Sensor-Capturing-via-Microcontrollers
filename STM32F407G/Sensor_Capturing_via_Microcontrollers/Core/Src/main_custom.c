@@ -10,19 +10,19 @@
 ADC_HandleTypeDef adc1_potensiometer, adc2_heat_sensor;
 ADC_ChannelConfTypeDef potensiometer_channel, heat_sensor_channel;
 UART_HandleTypeDef usart1;
+DMA_HandleTypeDef dma_i2c;
+I2C_HandleTypeDef i2c;
 TIM_HandleTypeDef timer;
 TaskHandle_t xTaskHeatSensor, xTaskPotensiometerValue, xTaskTransmitHeatSensor, xTaskTransmitPotensiometerValue = NULL;
 BaseType_t taskStatus;
-SemaphoreHandle_t xTransmitSemaphore = NULL;
-SemaphoreHandle_t xUARTSemaphore = NULL;
+SemaphoreHandle_t xTransmitSemaphore, xUARTSemaphore, xPotensiometer_i2c, xTemp_sensor_i2c = NULL;
+char uart_buffer[50] = {0};
+volatile uint32_t potensiometer_value, heat_sensor_value, intermediate, potensiometer_i2c, temp_sensor_i2c;
+volatile double potensiometer, temp_sensor, int_val = 0;
+uint16_t slave_i2c_addr = 0xBB;
 
 int main(void)
 {
-
-	char uart_buffer[50] = {0};
-	volatile uint32_t potensiometer_value, heat_sensor_value, intermediate;
-	volatile double potensiometer, temp_sensor, int_val = 0;
-
 	/* Initializes low level hardware at the processor level */
 	HAL_Init();
 
@@ -35,6 +35,14 @@ int main(void)
 		return Execution_Failed;
 
 	if( ADC_Config(&adc2_heat_sensor, ADC2, &heat_sensor_channel, ADC_CHANNEL_1) != Execution_Succesfull)
+		return Execution_Failed;
+
+	// Configure the DMA for I2C usage.
+	if ( DMA_Config(&dma_i2c, DMA1_Stream7) != Execution_Succesfull )
+		return Execution_Failed;
+
+	// Configure the I2C module.
+	if ( I2C_Config(&i2c, I2C2) != Execution_Succesfull )
 		return Execution_Failed;
 
 	// Configure the USART1 module
@@ -53,7 +61,7 @@ int main(void)
 							  tskIDLE_PRIORITY,
 							  &xTaskHeatSensor
 	                        );
-	configASSERT(taskstatus);
+	configASSERT(taskStatus);
 
 	taskStatus = xTaskCreate( Capture_Potensiometer_Value_Task,
 							  "Capture_Potensiometer_Value_Task",
@@ -62,7 +70,7 @@ int main(void)
 							  tskIDLE_PRIORITY,
 							  &xTaskPotensiometerValue
 							);
-	configASSERT(taskstatus);
+	configASSERT(taskStatus);
 
 	taskStatus = xTaskCreate( Transmit_Temp_Sensor_Value_Task,
 							  "Transmit_Temp_Sensor_Value_Task",
@@ -71,7 +79,7 @@ int main(void)
 							  tskIDLE_PRIORITY,
 							  &xTaskTransmitHeatSensor
 							);
-	configASSERT(taskstatus);
+	configASSERT(taskStatus);
 
 	taskStatus = xTaskCreate( Transmit_Potensiometer_Value_Task,
 							  "Transmit_Potensiometer_Value_Task",
@@ -80,11 +88,13 @@ int main(void)
 							  tskIDLE_PRIORITY,
 							  &xTaskTransmitPotensiometerValue
 							);
-	configASSERT(taskstatus);
+	configASSERT(taskStatus);
 
 	// Create the Semaphores.
 	xTransmitSemaphore = xSemaphoreCreateBinary();
 	xUARTSemaphore = xSemaphoreCreateBinary();
+	xPotensiometer_i2c = xSemaphoreCreateBinary();
+	xTemp_sensor_i2c = xSemaphoreCreateBinary();
 
 	// Start Timer 2 in Interrupt Mode.
 	HAL_TIM_Base_Start_IT(&timer);
@@ -99,7 +109,7 @@ int main(void)
 	vTaskEndScheduler();
 
 	// Stop Timer 2.
-	HAL_TIM_Base_Stop_IT(&pwm_timer, TIM_CHANNEL_3);
+	HAL_TIM_Base_Stop_IT(&timer);
 
 	return Execution_Succesfull;
 }
@@ -260,17 +270,61 @@ ReturnStatus ADC_Config(ADC_HandleTypeDef *adc_handle, ADC_TypeDef *adc_instance
 	adc_handle->Init.DataAlign = ADC_DATAALIGN_RIGHT;
 	adc_handle->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV8;
 
-	if( HAL_ADC_Init(adc_handle) != HAL_OK){
+	if( HAL_ADC_Init(adc_handle) != HAL_OK)
 		return Execution_Failed;
-	}
+
 
 	channel->Channel = channel_num;
 	channel->Rank = channel_num;
 	channel->SamplingTime = ADC_SAMPLETIME_56CYCLES;
 
-	if( HAL_ADC_ConfigChannel(adc_handle, channel) != HAL_OK){
+	if( HAL_ADC_ConfigChannel(adc_handle, channel) != HAL_OK)
 		return Execution_Failed;
-	}
+
+
+	return Execution_Succesfull;
+}
+
+ReturnStatus DMA_Config(DMA_HandleTypeDef *dma, DMA_Stream_TypeDef *Instance)
+{
+	memset(dma, 0, sizeof(*dma));
+	dma->Instance = Instance;
+	dma->Init.Channel = DMA_CHANNEL_7;
+	dma->Init.Direction = DMA_MEMORY_TO_PERIPH;
+	dma->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+	dma->Init.MemBurst = DMA_MBURST_SINGLE;
+	dma->Init.PeriphBurst = DMA_PBURST_SINGLE;
+	dma->Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+	dma->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+	dma->Init.Mode = DMA_NORMAL;
+	dma->Init.Priority = DMA_PRIORITY_HIGH;
+	dma->Init.PeriphInc = DMA_PINC_DISABLE;
+	dma->Init.MemInc = DMA_MINC_DISABLE;
+
+	if( HAL_DMA_Init(dma) != HAL_OK )
+		return Execution_Failed;
+
+	return Execution_Succesfull;
+}
+
+ReturnStatus I2C_Config(I2C_HandleTypeDef *i2c, I2C_TypeDef *Instance)
+{
+
+	memset(i2c, 0, sizeof(*i2c));
+	i2c->Instance = Instance;
+	i2c->Init.ClockSpeed = 100000;
+	i2c->Init.DutyCycle = I2C_DUTYCYCLE_2;
+	i2c->Init.OwnAddress1 = 0xAA;
+	i2c->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	i2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	i2c->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	i2c->Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;
+
+	// DMA setup for I2C communication.
+	i2c->hdmatx = &dma_i2c;
+
+	if( HAL_I2C_Init(i2c) != HAL_OK)
+		return Execution_Failed;
 
 	return Execution_Succesfull;
 }
@@ -334,7 +388,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-
+	// Indicates a UART transfer completed.
+	UNUSED(huart);
 }
 
 TaskFunction_t Capture_Temp_Sensor_Value_Task(void * pvParameters)
@@ -351,8 +406,18 @@ TaskFunction_t Capture_Temp_Sensor_Value_Task(void * pvParameters)
 	if(HAL_ADC_PollForConversion(&adc2_heat_sensor, 5) == HAL_OK){
 		heat_sensor_value = HAL_ADC_GetValue(&adc2_heat_sensor);
 		temp_sensor = (heat_sensor_value * 0.07324) - 50;
-		sprintf(uart_buffer, "The Temp Sensor has a value of: %1.2f Celsius.\n\r", temp_sensor);
-		HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+
+		if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE ){
+			temp_sensor_i2c = temp_sensor * 100;
+			xSemaphoreGive( xTemp_sensor_i2c );
+		}
+
+		if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
+			sprintf(uart_buffer, "The Temp Sensor has a value of: %1.2f Celsius.\n\r", temp_sensor);
+			HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+
+			xSemaphoreGive( xUARTSemaphore );
+		}
 	}
 	HAL_ADC_Stop(&adc2_heat_sensor);
 
@@ -374,15 +439,26 @@ TaskFunction_t Capture_Potensiometer_Value_Task(void * pvParameters)
 	HAL_ADC_Start(&adc1_potensiometer);
 	if(HAL_ADC_PollForConversion(&adc1_potensiometer, 5) == HAL_OK){
 		potensiometer_value = HAL_ADC_GetValue(&adc1_potensiometer);
-		int_val = (double)potensiometer_value;
+
+		/*int_val = (double)potensiometer_value;
 		// Update the PWM signal.
 		intermediate = (int_val / 4096) * 19;
 		__HAL_TIM_SET_COMPARE(&pwm_timer, TIM_CHANNEL_3, intermediate);
-		Delay(20); // Delay 20ms
+		Delay(20); // Delay 20ms*/
 
 		potensiometer = potensiometer_value * 0.0007324;
-		sprintf(uart_buffer, "The Potensiometer has a value of: %1.2f Volt.\n\r", potensiometer);
-		HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+
+		if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE ){
+			potensiometer_i2c = potensiometer * 100;
+			xSemaphoreGive( xPotensiometer_i2c );
+		}
+
+		if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
+			sprintf(uart_buffer, "The Potensiometer has a value of: %1.2f Volt.\n\r", potensiometer);
+			HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+
+			xSemaphoreGive( xUARTSemaphore );
+		}
 	}
 	HAL_ADC_Stop(&adc1_potensiometer);
 
@@ -393,50 +469,53 @@ TaskFunction_t Capture_Potensiometer_Value_Task(void * pvParameters)
 
 TaskFunction_t Transmit_Temp_Sensor_Value_Task(void * pvParameters)
 {
-	if( xTransmitSemaphore != NULL )
+	// Wait for Capture_Temp_Sensor_Value_task to capture a new value and notify.
+	xTaskNotifyWait(0, 0, &xTaskTransmitHeatSensor, portMAX_DELAY);
+
+	if( xTransmitSemaphore != NULL && xTemp_sensor_i2c != NULL)
 	    {
 	        // See if we can obtain the semaphore.  If the semaphore is not available
-	        // wait 10 ticks to see if it becomes free.
 	        if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
 	        {
-	            // We were able to obtain the semaphore and can now access the
-	            // shared resource.
+		        if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE )
+		        {
+					// We were able to obtain the semaphore and can now access the
+					// shared resource.
 
-	            // ...
+					HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &temp_sensor_i2c, sizeof(temp_sensor_i2c));
 
-	            // We have finished accessing the shared resource.  Release the
-	            // semaphore.
+					// We have finished accessing the shared resource.  Release the
+					// semaphore.
+		            xSemaphoreGive( xTemp_sensor_i2c );
+		        }
 	            xSemaphoreGive( xTransmitSemaphore );
-	        }
-	        else
-	        {
-	            // We could not obtain the semaphore and can therefore not access
-	            // the shared resource safely.
 	        }
 	    }
 }
 
 TaskFunction_t Transmit_Potensiometer_Value_Task(void * pvParameters)
 {
-	if( xTransmitSemaphore != NULL )
+	// Wait for Capture_Potensiometer_Value_task to capture a new value and notify.
+	xTaskNotifyWait(0, 0, &xTaskTransmitPotensiometerValue, portMAX_DELAY);
+
+	if( xTransmitSemaphore != NULL && xPotensiometer_i2c != NULL)
 	    {
 	        // See if we can obtain the semaphore.  If the semaphore is not available
 	        // wait 10 ticks to see if it becomes free.
 	        if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
 	        {
-	            // We were able to obtain the semaphore and can now access the
-	            // shared resource.
+		        if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE )
+		        {
+					// We were able to obtain the semaphore and can now access the
+					// shared resource.
 
-	            // ...
+					HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &potensiometer_i2c, sizeof(potensiometer_i2c));
 
-	            // We have finished accessing the shared resource.  Release the
-	            // semaphore.
+					// We have finished accessing the shared resource.  Release the
+					// semaphore.
+		            xSemaphoreGive( xPotensiometer_i2c );
+		        }
 	            xSemaphoreGive( xTransmitSemaphore );
-	        }
-	        else
-	        {
-	            // We could not obtain the semaphore and can therefore not access
-	            // the shared resource safely.
 	        }
 	    }
 }

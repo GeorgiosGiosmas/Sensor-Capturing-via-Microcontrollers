@@ -1,0 +1,14 @@
+../Core/Src/main_custom.c:24:5:main	12
+../Core/Src/main_custom.c:117:14:SystemClock_Config	10
+../Core/Src/main_custom.c:261:14:ADC_Config	3
+../Core/Src/main_custom.c:288:14:DMA_Config	2
+../Core/Src/main_custom.c:310:14:I2C_Config	2
+../Core/Src/main_custom.c:332:14:USART1_Config	2
+../Core/Src/main_custom.c:352:14:TIM2_Config	2
+../Core/Src/main_custom.c:370:6:Delay	2
+../Core/Src/main_custom.c:379:6:HAL_TIM_PeriodElapsedCallback	1
+../Core/Src/main_custom.c:389:6:HAL_UART_TxCpltCallback	1
+../Core/Src/main_custom.c:395:16:Capture_Temp_Sensor_Value_Task	4
+../Core/Src/main_custom.c:429:16:Capture_Potensiometer_Value_Task	4
+../Core/Src/main_custom.c:470:16:Transmit_Temp_Sensor_Value_Task	5
+../Core/Src/main_custom.c:496:16:Transmit_Potensiometer_Value_Task	5

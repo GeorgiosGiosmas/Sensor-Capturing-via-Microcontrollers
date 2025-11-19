@@ -4,16 +4,12 @@
  *  Created on: Nov 18, 2025
  *      Author: gigio
  */
+#include "it.h"
 
 extern UART_HandleTypeDef usart1;
 extern TIM_HandleTypeDef timer;
 
-void SysTick_Handler(void)
-{
-	uint8_t freertos_count = 0;
-}
-
-void TIM1_UP_TIM10_IRQn(void)
+void TIM1_UP_TIM10_IRQHandler(void)
 {
 	// Increase tick.
 	uwTick += uwTickFreq;

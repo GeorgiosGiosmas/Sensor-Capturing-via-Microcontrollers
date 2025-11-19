@@ -4,6 +4,7 @@
  *  Created on: Nov 18, 2025
  *      Author: gigio
  */
+#include "main_custom.h"
 
 void HAL_MspInit(void)
 {
@@ -40,6 +41,27 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 	gpio_analog.Pull = GPIO_NOPULL;
 	gpio_analog.Mode = GPIO_MODE_ANALOG;
 	HAL_GPIO_Init(GPIOA, &gpio_analog);
+
+}
+
+void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
+{
+	UNUSED(hi2c);
+	GPIO_InitTypeDef gpio_i2c;
+
+	memset(&gpio_i2c, 0, sizeof(gpio_i2c));
+
+	// Enable the I2C and GPIO PORT B clock.
+	__HAL_RCC_I2C2_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+
+	gpio_i2c.Pin = GPIO_PIN_10 | GPIO_PIN_11;
+	gpio_i2c.Speed = GPIO_SPEED_FREQ_LOW;
+	gpio_i2c.Mode = GPIO_MODE_AF_OD;
+	gpio_i2c.Pull = GPIO_NOPULL;
+	gpio_i2c.Alternate = GPIO_AF4_I2C2;
+
+	HAL_GPIO_Init(GPIOB,  &gpio_i2c);
 
 }
 
