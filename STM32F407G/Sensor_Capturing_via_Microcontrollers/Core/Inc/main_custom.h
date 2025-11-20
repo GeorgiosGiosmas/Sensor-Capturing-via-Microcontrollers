@@ -15,7 +15,11 @@
 #include "stm32f4xx_hal.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "timers.h"
+#include "queue.h"
 #include "semphr.h"
+#include "event_groups.h"
+
 /*
  *	@brief	This is a custom enumeration for the return status
  */

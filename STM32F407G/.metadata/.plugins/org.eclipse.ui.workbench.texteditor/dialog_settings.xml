@@ -3,14 +3,20 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
-		<item value="xTaskNotifyWait"/>
-		<item value="HAL_TIM_PeriodElapsedCallback"/>
-		<item value="configASSERT"/>
-		<item value="assert"/>
-		<item value="tskIDLE_PRIORITY"/>
-		<item value="ADC_channels"/>
-		<item value="ADC_Resolution"/>
-		<item value="ADC_ClockPrescaler"/>
-		<item value="HAL_IncTick"/>
+		<item value="vPortEnterCritical"/>
+		<item value="DMA_Peripheral_incremented_mode"/>
+		<item value="DMA_Memory_data_size"/>
+		<item value="DMA_FIFO_threshold_level"/>
+		<item value="DMA_FIFO_direct_mode"/>
+		<item value="DMA_Data_transfer_direction"/>
+		<item value="DMA_Channel_selection"/>
+		<item value="DMA_Stream_TypeDef"/>
+		<item value="GPIO_Alternate_function_selection"/>
+		<item value="GPIO_mode_define"/>
+		<item value="I2C_nostretch_mode"/>
+		<item value="I2C_general_call_addressing_mode"/>
+		<item value="I2C_dual_addressing_mode"/>
+		<item value="I2C_addressing_mode"/>
+		<item value="I2C_duty_cycle_in_fast_mode"/>
 	</list>
 </section>

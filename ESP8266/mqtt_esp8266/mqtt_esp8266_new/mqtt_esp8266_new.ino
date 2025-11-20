@@ -34,6 +34,11 @@ unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
 
+uint16_t received_temp_data = 0, received_potensiometer_data = 0;
+byte data_id = 0;
+bool new_temp_data = false, new_pot_data = false;
+float temperature = 0.0, potensiometer = 0.0;
+
 void setup_wifi() {
 
   delay(10);
@@ -66,16 +71,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-
-  // Switch on the LED if an 1 was received as first character
-  if ((char)payload[0] == '1') {
-    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
-    // but actually the LED is on; this is because
-    // it is active low on the ESP-01)
-  } else {
-    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
-  }
-
 }
 
 void reconnect() {
@@ -89,9 +84,8 @@ void reconnect() {
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("device/temp", "MQQTT Server is Connected");
-      // ... and resubscribe
-      client.subscribe("device/led");
+      client.publish("device/temperature", "MQTT Server is Connected");
+      client.publish("device/potensiometer", "MQTT Server is Connected");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -117,13 +111,50 @@ void loop() {
   }
   client.loop();
 
-  unsigned long now = millis();
-  if (now - lastMsg > 2000) {
-    lastMsg = now;
-    value = analogRead(A0)*0.33;
-    snprintf (msg, MSG_BUFFER_SIZE, "Temperature is #%ld", value);
-    Serial.print("Publish message: ");
-    Serial.println(msg);
-    client.publish("device/temp", msg);
+  if(new_temp_data)
+  {
+    // Send the Temperature's sensor value to the MQTT server.
+    temperature = received_temp_data / 100.0;
+    snprintf (msg, MSG_BUFFER_SIZE, "Temperature is #%lf", temperature);
+    client.publish("device/temperature", msg);
+
+    new_temp_data = false;
+  }
+
+  delay(100);
+
+  if(new_pot_data)
+  {
+    // Send the Potensiometer's value to the MQTT server.
+    potensiometer = received_potensiometer_data / 100.0;
+    snprintf (msg, MSG_BUFFER_SIZE, "Potensiometer's value is #%lf", potensiometer);
+    client.publish("device/potensiometer", msg);
+
+    new_pot_data = false;
+  }
+}
+
+void serialEvent()
+{
+  while(Serial.available() > 2)
+  {
+    data_id = Serial.read();  
+
+    if(data_id == 0)
+    {
+
+      received_temp_data = Serial.read() << 8;
+      received_temp_data |= Serial.read();
+
+      new_temp_data = true;
+
+    } else if(data_id == 1)
+    {
+      
+      received_potensiometer_data = Serial.read() << 8;
+      received_potensiometer_data |= Serial.read();
+
+      new_pot_data = true;
+    }
   }
 }

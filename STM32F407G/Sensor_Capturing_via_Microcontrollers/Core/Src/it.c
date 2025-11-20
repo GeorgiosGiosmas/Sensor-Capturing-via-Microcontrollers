@@ -7,12 +7,12 @@
 #include "it.h"
 
 extern UART_HandleTypeDef usart1;
-extern TIM_HandleTypeDef timer;
+extern TIM_HandleTypeDef timer, htim1;
+
 
 void TIM1_UP_TIM10_IRQHandler(void)
 {
-	// Increase tick.
-	uwTick += uwTickFreq;
+	HAL_TIM_IRQHandler(&htim1);
 }
 
 void USART1_IRQHandler(void)

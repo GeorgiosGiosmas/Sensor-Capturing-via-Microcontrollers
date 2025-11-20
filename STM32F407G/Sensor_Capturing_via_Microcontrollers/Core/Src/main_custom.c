@@ -19,7 +19,7 @@ SemaphoreHandle_t xTransmitSemaphore, xUARTSemaphore, xPotensiometer_i2c, xTemp_
 char uart_buffer[50] = {0};
 volatile uint32_t potensiometer_value, heat_sensor_value, intermediate, potensiometer_i2c, temp_sensor_i2c;
 volatile double potensiometer, temp_sensor, int_val = 0;
-uint16_t slave_i2c_addr = 0xBB;
+uint8_t slave_i2c_addr = 0xBA;
 
 int main(void)
 {
@@ -58,7 +58,7 @@ int main(void)
 							  "Capture_Temp_Sensor_Value_Task",
 							  configMINIMAL_STACK_SIZE,
 							  ( void * ) NULL,
-							  tskIDLE_PRIORITY,
+							  0,
 							  &xTaskHeatSensor
 	                        );
 	configASSERT(taskStatus);
@@ -67,7 +67,7 @@ int main(void)
 							  "Capture_Potensiometer_Value_Task",
 							  configMINIMAL_STACK_SIZE,
 							  ( void * ) NULL,
-							  tskIDLE_PRIORITY,
+							  0,
 							  &xTaskPotensiometerValue
 							);
 	configASSERT(taskStatus);
@@ -76,7 +76,7 @@ int main(void)
 							  "Transmit_Temp_Sensor_Value_Task",
 							  configMINIMAL_STACK_SIZE,
 							  ( void * ) NULL,
-							  tskIDLE_PRIORITY,
+							  0,
 							  &xTaskTransmitHeatSensor
 							);
 	configASSERT(taskStatus);
@@ -85,7 +85,7 @@ int main(void)
 							  "Transmit_Potensiometer_Value_Task",
 							  configMINIMAL_STACK_SIZE,
 							  ( void * ) NULL,
-							  tskIDLE_PRIORITY,
+							  0,
 							  &xTaskTransmitPotensiometerValue
 							);
 	configASSERT(taskStatus);
@@ -378,12 +378,15 @@ void Delay(uint32_t ms)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	UNUSED(htim);
+	if (htim->Instance == TIM1)
+		HAL_IncTick();
 
-	// 5 seconds passed ... time to capture from the sensors.
-	xTaskNotify(xTaskHeatSensor, 0, eNoAction);
-	xTaskNotify(xTaskPotensiometerValue, 0, eNoAction);
-
+	if (htim->Instance == TIM2)
+	{
+		// 5 seconds passed ... time to capture from the sensors.
+		xTaskNotifyFromISR(xTaskHeatSensor, 0, eNoAction, pdFALSE);
+		xTaskNotifyFromISR(xTaskPotensiometerValue, 0, eNoAction, pdFALSE);
+	}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
