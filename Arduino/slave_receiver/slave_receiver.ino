@@ -10,6 +10,7 @@
 
 
 #include <Wire.h>
+#include <DHT11.h>
 
 const int16_t I2C_SLAVE = 0xBB;
 
