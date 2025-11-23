@@ -9,6 +9,6 @@
 ../Core/Src/main_custom.c:382:6:HAL_TIM_PeriodElapsedCallback	3
 ../Core/Src/main_custom.c:395:6:HAL_UART_TxCpltCallback	1
 ../Core/Src/main_custom.c:401:6:Capture_Temp_Sensor_Value_Task	4
-../Core/Src/main_custom.c:435:6:Capture_Potensiometer_Value_Task	4
-../Core/Src/main_custom.c:476:6:Transmit_Temp_Sensor_Value_Task	5
-../Core/Src/main_custom.c:506:6:Transmit_Potensiometer_Value_Task	5
+../Core/Src/main_custom.c:437:6:Capture_Potensiometer_Value_Task	4
+../Core/Src/main_custom.c:473:6:Transmit_Temp_Sensor_Value_Task	5
+../Core/Src/main_custom.c:505:6:Transmit_Potensiometer_Value_Task	5

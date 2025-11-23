@@ -3,6 +3,7 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
+		<item value="BaseType_t"/>
 		<item value="vPortEnterCritical"/>
 		<item value="DMA_Peripheral_incremented_mode"/>
 		<item value="DMA_Memory_data_size"/>
@@ -17,6 +18,5 @@
 		<item value="I2C_general_call_addressing_mode"/>
 		<item value="I2C_dual_addressing_mode"/>
 		<item value="I2C_addressing_mode"/>
-		<item value="I2C_duty_cycle_in_fast_mode"/>
 	</list>
 </section>

@@ -8,7 +8,7 @@
 
 extern UART_HandleTypeDef usart1;
 extern TIM_HandleTypeDef timer, htim1;
-
+extern TaskHandle_t xTaskHeatSensor, xTaskPotensiometerValue;
 
 void TIM1_UP_TIM10_IRQHandler(void)
 {

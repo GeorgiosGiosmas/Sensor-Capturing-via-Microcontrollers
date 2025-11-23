@@ -94,10 +94,10 @@ int main(void)
 	configASSERT(taskStatus);
 
 	// Create the Semaphores.
-	xTransmitSemaphore = xSemaphoreCreateBinary();
-	xUARTSemaphore = xSemaphoreCreateBinary();
-	xPotensiometer_i2c = xSemaphoreCreateBinary();
-	xTemp_sensor_i2c = xSemaphoreCreateBinary();
+	xTransmitSemaphore = xSemaphoreCreateMutex();
+	xUARTSemaphore = xSemaphoreCreateMutex();
+	xPotensiometer_i2c = xSemaphoreCreateMutex();
+	xTemp_sensor_i2c = xSemaphoreCreateMutex();
 
 	// Start Timer 2 in Interrupt Mode.
 	HAL_TIM_Base_Start_IT(&timer);
@@ -387,8 +387,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if (htim->Instance == TIM2)
 	{
 		// 5 seconds passed ... time to capture from the sensors.
-		xTaskNotifyFromISR(xTaskHeatSensor, 0, eNoAction, pdFALSE);
-		xTaskNotifyFromISR(xTaskPotensiometerValue, 0, eNoAction, pdFALSE);
+		xTaskNotifyFromISR(xTaskHeatSensor, 0, eNoAction, NULL);
+		xTaskNotifyFromISR(xTaskPotensiometerValue, 0, eNoAction, NULL);
 	}
 }
 
@@ -401,138 +401,139 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void Capture_Temp_Sensor_Value_Task(void * pvParameters)
 {
 
-	// Task's Notification value.
-	static uint32_t HeatSensorNotificationValue = 0;
+	BaseType_t status;
 
-	// Wait for the TIM2 to complete a period before capturing again.
-	xTaskNotifyWait(0, 0, &HeatSensorNotificationValue, portMAX_DELAY);
+	for(;;)
+	{
+		// Wait for the TIM2 to complete a period before capturing again.
+		status = xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
 
-	// Start heat sensor reading.
-	HAL_ADC_Start(&adc2_heat_sensor);
-	if(HAL_ADC_PollForConversion(&adc2_heat_sensor, 5) == HAL_OK){
-		heat_sensor_value = HAL_ADC_GetValue(&adc2_heat_sensor);
-		temp_sensor = (heat_sensor_value * 0.07324) - 50;
+		// Start heat sensor reading.
+		HAL_ADC_Start(&adc2_heat_sensor);
+		if(HAL_ADC_PollForConversion(&adc2_heat_sensor, 5) == HAL_OK){
+			heat_sensor_value = HAL_ADC_GetValue(&adc2_heat_sensor);
+			temp_sensor = (heat_sensor_value * 0.07324) - 50;
 
-		if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE ){
-			temp_sensor_i2c = temp_sensor * 100;
-			xSemaphoreGive( xTemp_sensor_i2c );
+			if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE ){
+				temp_sensor_i2c = temp_sensor * 100;
+				xSemaphoreGive( xTemp_sensor_i2c );
+			}
+
+			if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
+				sprintf(uart_buffer, "The Temp Sensor has a value of: %1.2f Celsius.\n\r", temp_sensor);
+				HAL_UART_Transmit(&usart1, (const uint8_t* )uart_buffer, 50, 0xFFFFFFFF);
+
+				xSemaphoreGive( xUARTSemaphore );
+			}
 		}
+		HAL_ADC_Stop(&adc2_heat_sensor);
 
-		if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
-			sprintf(uart_buffer, "The Temp Sensor has a value of: %1.2f Celsius.\n\r", temp_sensor);
-			HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+		// xTskNotify --> To transmit the next Temperature Sensor's value.
+		status = xTaskNotify(xTaskTransmitHeatSensor, 0, eNoAction);
 
-			xSemaphoreGive( xUARTSemaphore );
-		}
 	}
-	HAL_ADC_Stop(&adc2_heat_sensor);
-
-	// xTskNotify --> To transmit the next Temperature Sensor's value.
-	xTaskNotify(xTaskTransmitHeatSensor, 0, eNoAction);
-
 }
 
 void Capture_Potensiometer_Value_Task(void * pvParameters)
 {
 
-	// Task's Notification value.
-	static uint32_t PotensiometerNotificationValue = 0;
+	BaseType_t status;
 
-	// Wait for the TIM2 to complete a period before capturing again.
-	xTaskNotifyWait(0, 0, &PotensiometerNotificationValue, portMAX_DELAY);
+	for(;;)
+	{
+		// Wait for the TIM2 to complete a period before capturing again.
+		status = xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
 
-	// Start potensiometer's reading.
-	HAL_ADC_Start(&adc1_potensiometer);
-	if(HAL_ADC_PollForConversion(&adc1_potensiometer, 5) == HAL_OK){
-		potensiometer_value = HAL_ADC_GetValue(&adc1_potensiometer);
+		// Start potensiometer's reading.
+		HAL_ADC_Start(&adc1_potensiometer);
+		if(HAL_ADC_PollForConversion(&adc1_potensiometer, 5) == HAL_OK){
+			potensiometer_value = HAL_ADC_GetValue(&adc1_potensiometer);
+			potensiometer = potensiometer_value * 0.0007324;
 
-		/*int_val = (double)potensiometer_value;
-		// Update the PWM signal.
-		intermediate = (int_val / 4096) * 19;
-		__HAL_TIM_SET_COMPARE(&pwm_timer, TIM_CHANNEL_3, intermediate);
-		Delay(20); // Delay 20ms*/
+			if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE ){
+				potensiometer_i2c = potensiometer * 100;
+				xSemaphoreGive( xPotensiometer_i2c );
+			}
 
-		potensiometer = potensiometer_value * 0.0007324;
+			if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
+				sprintf(uart_buffer, "The Potensiometer has a value of: %1.2f Volt.\n\r", potensiometer);
+				HAL_UART_Transmit(&usart1, (const uint8_t* )uart_buffer, 50, 0xFFFFFFFF);
 
-		if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE ){
-			potensiometer_i2c = potensiometer * 100;
-			xSemaphoreGive( xPotensiometer_i2c );
+				xSemaphoreGive( xUARTSemaphore );
+			}
 		}
+		HAL_ADC_Stop(&adc1_potensiometer);
 
-		if( xSemaphoreTake( xUARTSemaphore, portMAX_DELAY ) == pdTRUE ){
-			sprintf(uart_buffer, "The Potensiometer has a value of: %1.2f Volt.\n\r", potensiometer);
-			HAL_UART_Transmit_IT(&usart1, (const uint8_t* )uart_buffer, 50);
+		// xTaskNotify --> To transmit the new  Potensiometer's value.
+		status = xTaskNotify(xTaskTransmitPotensiometerValue, 0, eNoAction);
 
-			xSemaphoreGive( xUARTSemaphore );
-		}
 	}
-	HAL_ADC_Stop(&adc1_potensiometer);
-
-	// xTaskNotify --> To transmit the new  Potensiometer's value.
-	xTaskNotify(xTaskTransmitPotensiometerValue, 0, eNoAction);
-
 }
 
 void Transmit_Temp_Sensor_Value_Task(void * pvParameters)
 {
-	// Task's Notification value.
-	static uint32_t TaskTransmitHeatSensorNotificationValue = 0;
+	BaseType_t status;
 
-	// Wait for Capture_Temp_Sensor_Value_task to capture a new value and notify.
-	xTaskNotifyWait(0, 0, &TaskTransmitHeatSensorNotificationValue, portMAX_DELAY);
+	for(;;)
+	{
+		// Wait for Capture_Temp_Sensor_Value_task to capture a new value and notify.
+		status = xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
 
-	if( xTransmitSemaphore != NULL && xTemp_sensor_i2c != NULL)
-	    {
-	        // See if we can obtain the semaphore.  If the semaphore is not available
-	        if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
-	        {
-		        if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE )
-		        {
-					// We were able to obtain the semaphore and can now access the
-					// shared resource.
+		if( xTransmitSemaphore != NULL && xTemp_sensor_i2c != NULL)
+			{
+				// See if we can obtain the semaphore.  If the semaphore is not available
+				if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
+				{
+					if( xSemaphoreTake( xTemp_sensor_i2c, portMAX_DELAY ) == pdTRUE )
+					{
+						// We were able to obtain the semaphore and can now access the
+						// shared resource.
 
-					HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &HEAT_SENSOR_ID, 1);
-					HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&temp_sensor_i2c, sizeof(temp_sensor_i2c));
+						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &HEAT_SENSOR_ID, 1);
+						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&temp_sensor_i2c, sizeof(temp_sensor_i2c));
 
-					// We have finished accessing the shared resource.  Release the
-					// semaphore.
-		            xSemaphoreGive( xTemp_sensor_i2c );
-		        }
-	            xSemaphoreGive( xTransmitSemaphore );
-	        }
-	    }
+						// We have finished accessing the shared resource.  Release the
+						// semaphore.
+						xSemaphoreGive( xTemp_sensor_i2c );
+					}
+					xSemaphoreGive( xTransmitSemaphore );
+				}
+			}
+	}
 }
 
 void Transmit_Potensiometer_Value_Task(void * pvParameters)
 {
 
-	// Task's Notification value.
-	static uint32_t TaskTransmitPotensiometerValueNotificationValue = 0;
+	BaseType_t status;
 
-	// Wait for Capture_Potensiometer_Value_task to capture a new value and notify.
-	xTaskNotifyWait(0, 0, &TaskTransmitPotensiometerValueNotificationValue, portMAX_DELAY);
+	for(;;)
+	{
+		// Wait for Capture_Potensiometer_Value_task to capture a new value and notify.
+		status = xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
 
-	if( xTransmitSemaphore != NULL && xPotensiometer_i2c != NULL)
-	    {
-	        // See if we can obtain the semaphore.  If the semaphore is not available
-	        // wait 10 ticks to see if it becomes free.
-	        if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
-	        {
-		        if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE )
-		        {
-					// We were able to obtain the semaphore and can now access the
-					// shared resource.
+		if( xTransmitSemaphore != NULL && xPotensiometer_i2c != NULL)
+			{
+				// See if we can obtain the semaphore.  If the semaphore is not available
+				// wait 10 ticks to see if it becomes free.
+				if( xSemaphoreTake( xTransmitSemaphore, portMAX_DELAY ) == pdTRUE )
+				{
+					if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE )
+					{
+						// We were able to obtain the semaphore and can now access the
+						// shared resource.
 
-		        	HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &POTENSIOMETER_ID, 1);
-					HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&potensiometer_i2c, sizeof(potensiometer_i2c));
+						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &POTENSIOMETER_ID, 1);
+						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&potensiometer_i2c, sizeof(potensiometer_i2c));
 
-					// We have finished accessing the shared resource.  Release the
-					// semaphore.
-		            xSemaphoreGive( xPotensiometer_i2c );
-		        }
-	            xSemaphoreGive( xTransmitSemaphore );
-	        }
-	    }
+						// We have finished accessing the shared resource.  Release the
+						// semaphore.
+						xSemaphoreGive( xPotensiometer_i2c );
+					}
+					xSemaphoreGive( xTransmitSemaphore );
+				}
+			}
+	}
 }
 
 
