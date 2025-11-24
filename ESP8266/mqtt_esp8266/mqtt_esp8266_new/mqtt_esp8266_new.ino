@@ -34,9 +34,9 @@ unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
 
-uint16_t received_temp_data = 0, received_potensiometer_data = 0;
+uint16_t received_temp_data = 0, received_potensiometer_data = 0, received_dht11_temperature = 0, received_dht11_humidity = 0;
 byte data_id = 0;
-bool new_temp_data = false, new_pot_data = false;
+bool new_temp_data = false, new_pot_data = false, new_dht11_temp_data = false, new_dht11_humidity_data;
 float temperature = 0.0, potensiometer = 0.0;
 
 void setup_wifi() {
@@ -86,6 +86,7 @@ void reconnect() {
       // Once connected, publish an announcement...
       client.publish("device/temperature", "MQTT Server is Connected");
       client.publish("device/potensiometer", "MQTT Server is Connected");
+      client.publish("device/dht11", "MQTT Server is Connected");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -121,7 +122,7 @@ void loop() {
     new_temp_data = false;
   }
 
-  delay(100);
+  delay(20);
 
   if(new_pot_data)
   {
@@ -131,6 +132,28 @@ void loop() {
     client.publish("device/potensiometer", msg);
 
     new_pot_data = false;
+  }
+
+  delay(20);
+
+  if(new_dht11_temp_data)
+  {
+    // Send the DHT11's temperature to the MQTT server.
+    snprintf (msg, MSG_BUFFER_SIZE, "The temperature from the DHT11 sensor is #%ld °C", received_dht11_temperature);
+    client.publish("device/dht11", msg);
+
+    new_dht11_temp_data = false;
+  }
+
+  delay(20);
+
+  if(new_dht11_humidity_data)
+  {
+    // Send the Potensiometer's value to the MQTT server.
+    snprintf (msg, MSG_BUFFER_SIZE, "The temperature from the DHT11 sensor is #%ld °C", received_dht11_humidity);
+    client.publish("device/dht11", msg);
+
+    new_dht11_humidity_data = false;
   }
 }
 
@@ -155,6 +178,22 @@ void serialEvent()
       received_potensiometer_data |= Serial.read();
 
       new_pot_data = true;
+
+    } else if(data_id == 2)
+    {
+      
+      received_dht11_temperature = Serial.read() << 8;
+      received_dht11_temperature |= Serial.read();
+
+      new_dht11_temp_data = true;
+
+    } else if(data_id == 3)
+    {
+      
+      received_dht11_humidity = Serial.read() << 8;
+      received_dht11_humidity |= Serial.read();
+
+      new_dht11_humidity_data = true;
     }
   }
 }

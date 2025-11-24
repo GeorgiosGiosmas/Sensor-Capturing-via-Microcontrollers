@@ -1,3 +1,5 @@
+#include <Wire.h>
+
 // Wire Slave Receiver
 // by devyte
 // based on the example by Nicholas Zambetti <http://www.zambetti.com>
@@ -8,22 +10,38 @@
 
 // This example code is in the public domain.
 
-
 #include <Wire.h>
 #include <DHT11.h>
 
-const int16_t I2C_SLAVE = 0xBB;
+const uint8_t I2C_SLAVE = 0xBB;
 
 uint16_t received_temp_data = 0, received_potensiometer_data = 0;
 byte data_id = 0;
-bool new_temp_data = false, new_pot_data = false;
+bool new_temp_data = false, new_pot_data, new_dht11_data = false;
+int dht11_temperature, dht11_humidity, result = 0;
+DHT11 dht11 = DHT11(4);
 
+void InitializeTimer()
+{
+
+  TCCR0A = (1<<WGM01);    //Set the CTC mode   
+  OCR0A = 0xB71A; //Value for ORC0A for 3 seconds 
+  
+  TIMSK0 |= (1<<OCIE0A);   //Set  the interrupt request
+  sei(); //Enable interrupt
+    
+  TCCR0B |= (1<<CS02);    //Set the prescale 1/1024 clock
+  TCCR0B |= (0<<CS01);    
+  TCCR0B |= (1<<CS00);
+
+}
 void setup() 
 {
   Serial.begin(115200);                     // start serial for output
-  Wire.begin(SDA, SCL, I2C_SLAVE);          // new syntax: join i2c bus (address required for slave)
+  Wire.begin(I2C_SLAVE);          // new syntax: join i2c bus (address required for slave)
   Wire.setClock(100000);
   Wire.onReceive(receiveEvent);             // register event
+  InitializeTimer();
 }
 
 // Loop functions keeps sending the received values from STM32F407G Disc board to the Generic ESP8266 module..
@@ -50,6 +68,23 @@ void loop()
     Serial.write(received_potensiometer_data & 0xFF);            // Send the lower byte
 
     new_pot_data = false;
+  }
+
+  if(new_dht11_data)
+  {
+    result = dht11.readTemperatureHumidity(dht11_temperature, dht11_humidity);
+
+    // Send DHT11's Temperature value.
+    Serial.write(0x2);                                            // First send the id byte
+    Serial.write((dht11_temperature >> 8) & 0xFF);               // Send the upper byte 
+    Serial.write(dht11_temperature & 0xFF);                     // Send the lower byte
+
+    // Send DHT11's Humidity value.
+    Serial.write(0x3);                                            // First send the id byte
+    Serial.write((dht11_humidity >> 8) & 0xFF);               // Send the upper byte 
+    Serial.write(dht11_humidity & 0xFF);                     // Send the lower byte
+
+    new_dht11_data = false;
   }
 
 }
@@ -81,4 +116,11 @@ void receiveEvent(size_t howmany) {
 
     }                   
   }
+}
+
+ISR(TIMER0_COMPA_vect){    
+
+  // 3 seconds passed time to re-capture the DHT11 sensor again.
+  new_dht11_data = true;
+
 }
