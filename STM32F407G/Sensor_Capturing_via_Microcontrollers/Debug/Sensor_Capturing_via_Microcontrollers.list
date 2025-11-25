@@ -2649,7 +2649,7 @@ void Capture_Potensiometer_Value_Task(void * pvParameters)
  800183a:	4603      	mov	r3, r0
  800183c:	4a33      	ldr	r2, [pc, #204]	@ (800190c <Capture_Potensiometer_Value_Task+0x104>)
  800183e:	6013      	str	r3, [r2, #0]
-			potensiometer = potensiometer_value * 0.0007324;
+			potensiometer = potensiometer_value * 0.0008057;
  8001840:	4b32      	ldr	r3, [pc, #200]	@ (800190c <Capture_Potensiometer_Value_Task+0x104>)
  8001842:	681b      	ldr	r3, [r3, #0]
  8001844:	4618      	mov	r0, r3
@@ -2743,8 +2743,8 @@ void Capture_Potensiometer_Value_Task(void * pvParameters)
  80018f8:	e78a      	b.n	8001810 <Capture_Potensiometer_Value_Task+0x8>
  80018fa:	bf00      	nop
  80018fc:	f3af 8000 	nop.w
- 8001900:	06177136 	.word	0x06177136
- 8001904:	3f47ffd1 	.word	0x3f47ffd1
+ 8001900:	933fe345 	.word	0x933fe345
+ 8001904:	3f4a66b3 	.word	0x3f4a66b3
  8001908:	2000069c 	.word	0x2000069c
  800190c:	200008e8 	.word	0x200008e8
  8001910:	200008f8 	.word	0x200008f8

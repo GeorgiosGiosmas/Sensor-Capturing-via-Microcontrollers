@@ -13,12 +13,14 @@
 #include <Wire.h>
 #include <DHT11.h>
 
+#define LED_PWM_PIN  A0
+
 const uint8_t I2C_SLAVE = 0xBB;
 
 uint16_t received_temp_data = 0, received_potensiometer_data = 0;
 byte data_id = 0;
 bool new_temp_data = false, new_pot_data, new_dht11_data = false;
-int dht11_temperature, dht11_humidity, result = 0;
+int dht11_temperature, dht11_humidity, result = 0, brightness = 0;
 DHT11 dht11 = DHT11(4);
 
 void InitializeTimer()
@@ -37,6 +39,7 @@ void InitializeTimer()
 }
 void setup() 
 {
+  pinMode(LED_PWM_PIN, OUTPUT);
   Serial.begin(115200);                     // start serial for output
   Wire.begin(I2C_SLAVE);          // new syntax: join i2c bus (address required for slave)
   Wire.setClock(100000);
@@ -53,21 +56,26 @@ void loop()
     // Send the Temperature's sensor value.
     Serial.write(0x0);                                            // First send the id byte
     Serial.write((received_temp_data >> 8) & 0xFF);               // Send the upper byte 
-    Serial.write(received_temp_data & 0xFF);                     // Send the lower byte
+    Serial.write(received_temp_data & 0xFF);                      // Send the lower byte
 
     new_temp_data = false;
   }
 
-  delay(100);
+  delay(20);
 
   if(new_pot_data)
   {
     // Send the Potensiometer's value.
-    Serial.write(0x1);                                           // First send the id byte
+    Serial.write(0x1);                                            // First send the id byte
     Serial.write((received_potensiometer_data >> 8) & 0xFF);      // Send the upper byte 
-    Serial.write(received_potensiometer_data & 0xFF);            // Send the lower byte
+    Serial.write(received_potensiometer_data & 0xFF);             // Send the lower byte
 
     new_pot_data = false;
+
+    // Adjust the brightness of the local LED.
+    brightness = ((received_potensiometer_data/100)/3.3)*255;
+
+    analogWrite(LED_PWM_PIN, brightness);
   }
 
   if(new_dht11_data)

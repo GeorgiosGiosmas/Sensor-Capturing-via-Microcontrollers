@@ -448,7 +448,7 @@ void Capture_Potensiometer_Value_Task(void * pvParameters)
 		HAL_ADC_Start(&adc1_potensiometer);
 		if(HAL_ADC_PollForConversion(&adc1_potensiometer, 5) == HAL_OK){
 			potensiometer_value = HAL_ADC_GetValue(&adc1_potensiometer);
-			potensiometer = potensiometer_value * 0.0007324;
+			potensiometer = potensiometer_value * 0.0008057;
 
 			if( xSemaphoreTake( xPotensiometer_i2c, portMAX_DELAY ) == pdTRUE ){
 				potensiometer_i2c = potensiometer * 100;
