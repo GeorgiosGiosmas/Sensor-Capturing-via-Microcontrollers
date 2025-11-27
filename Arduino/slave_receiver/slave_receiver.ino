@@ -13,7 +13,7 @@
 #include <Wire.h>
 #include <DHT11.h>
 
-#define LED_PWM_PIN  A0
+#define LED_PWM_PIN  8
 
 const uint8_t I2C_SLAVE = 0x3A;
 
@@ -27,7 +27,6 @@ DHT11 dht11 = DHT11(4);
 
 void setup() 
 {
-  pinMode(LED_PWM_PIN, OUTPUT);
   Serial.begin(115200);                     // start serial for output
   Wire.begin(I2C_SLAVE);          // new syntax: join i2c bus (address required for slave)
   Wire.setClock(100000);
@@ -60,7 +59,9 @@ void loop()
     new_pot_data = false;
 
     // Adjust the brightness of the local LED.
-    brightness = ((received_potensiometer_data/100)/3.3)*255;
+    brightness = ((received_potensiometer_data/100.0)/3.3)*255.0;
+    Serial.print("Brightness: ");
+    Serial.println(brightness);
 
     analogWrite(LED_PWM_PIN, brightness);
   }
@@ -71,19 +72,11 @@ void loop()
     result = dht11.readTemperatureHumidity(dht11_temperature, dht11_humidity);
 
     // Send DHT11's Temperature value.
-    Serial.print("Sending DHT11 temp: ");
-    Serial.print(dht11_temperature);
-    Serial.println(".");
-
     Serial.write(0x2);                                            // First send the id byte
     Serial.write((dht11_temperature >> 8) & 0xFF);               // Send the upper byte 
     Serial.write(dht11_temperature & 0xFF);                     // Send the lower byte
 
     // Send DHT11's Humidity value.
-    Serial.print("Sending DHT11 humidity: ");
-    Serial.print(dht11_humidity);
-    Serial.println(".");
-
     Serial.write(0x3);                                            // First send the id byte
     Serial.write((dht11_humidity >> 8) & 0xFF);               // Send the upper byte 
     Serial.write(dht11_humidity & 0xFF);                     // Send the lower byte
@@ -99,17 +92,22 @@ void loop()
 // This function is registered as an event, see setup().
 void receiveEvent(size_t howmany) {
 
+  Serial.println("New I2C data arived");
   (void)howmany;
-  while (Wire.available() > 2) {  
-    Serial.println("New I2C data arived");
-    data_id = Wire.read();  
 
+  if(Wire.available() == 1)
+  {
+    data_id = Wire.read();  
+  }
+
+  if(Wire.available() == 2)
+  {
     if(data_id == 0)
     {
 
       received_temp_data = Wire.read();
       received_temp_data |= Wire.read() << 8;
-
+      
       new_temp_data = true;
 
     } else if(data_id == 1)
@@ -117,11 +115,10 @@ void receiveEvent(size_t howmany) {
       
       received_potensiometer_data = Wire.read();
       received_potensiometer_data |= Wire.read() << 8;
-
+    
       new_pot_data = true;
-
-    }                   
-  }
+    }  
+  }                 
 }
 
 void DHT11_new_data()

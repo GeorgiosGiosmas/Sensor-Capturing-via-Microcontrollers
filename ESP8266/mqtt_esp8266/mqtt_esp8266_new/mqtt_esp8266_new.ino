@@ -116,7 +116,7 @@ void loop() {
   {
     // Send the Temperature's sensor value to the MQTT server.
     temperature = received_temp_data / 100.0;
-    snprintf (msg, MSG_BUFFER_SIZE, "Temperature is #%lf", temperature);
+    snprintf (msg, MSG_BUFFER_SIZE, "Temperature is #%lf °C", temperature);
     client.publish("device/temperature", msg);
 
     new_temp_data = false;
@@ -128,7 +128,7 @@ void loop() {
   {
     // Send the Potensiometer's value to the MQTT server.
     potensiometer = received_potensiometer_data / 100.0;
-    snprintf (msg, MSG_BUFFER_SIZE, "Potensiometer's value is #%lf", potensiometer);
+    snprintf (msg, MSG_BUFFER_SIZE, "Potensiometer's value is #%lf V", potensiometer);
     client.publish("device/potensiometer", msg);
 
     new_pot_data = false;
@@ -150,7 +150,7 @@ void loop() {
   if(new_dht11_humidity_data)
   {
     // Send the Potensiometer's value to the MQTT server.
-    snprintf (msg, MSG_BUFFER_SIZE, "The humidity from the DHT11 sensor is #%ld \%", received_dht11_humidity);
+    snprintf (msg, MSG_BUFFER_SIZE, "The humidity from the DHT11 sensor is #%ld %%", received_dht11_humidity);
     client.publish("device/dht11", msg);
 
     new_dht11_humidity_data = false;

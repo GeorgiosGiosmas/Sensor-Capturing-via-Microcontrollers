@@ -56,7 +56,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 
 	gpio_i2c.Pin = GPIO_PIN_10 | GPIO_PIN_11;
-	gpio_i2c.Speed = GPIO_SPEED_FREQ_LOW;
+	gpio_i2c.Speed = GPIO_SPEED_FREQ_HIGH;
 	gpio_i2c.Mode = GPIO_MODE_AF_OD;
 	gpio_i2c.Pull = GPIO_NOPULL;
 	gpio_i2c.Alternate = GPIO_AF4_I2C2;

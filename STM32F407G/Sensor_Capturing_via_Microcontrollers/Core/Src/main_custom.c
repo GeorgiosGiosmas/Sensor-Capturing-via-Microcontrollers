@@ -317,14 +317,14 @@ ReturnStatus I2C_Config(I2C_HandleTypeDef *i2c, I2C_TypeDef *Instance)
 	i2c->Instance = Instance;
 	i2c->Init.ClockSpeed = 100000;
 	i2c->Init.DutyCycle = I2C_DUTYCYCLE_2;
-	i2c->Init.OwnAddress1 = 0xAA;
+	i2c->Init.OwnAddress1 = 0x2A;
 	i2c->Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	i2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
 	i2c->Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	i2c->Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;
 
 	// DMA setup for I2C communication.
-	i2c->hdmatx = &dma_i2c;
+	//i2c->hdmatx = &dma_i2c;
 
 	if( HAL_I2C_Init(i2c) != HAL_OK)
 		return Execution_Failed;
@@ -473,6 +473,7 @@ void Capture_Potensiometer_Value_Task(void * pvParameters)
 void Transmit_Temp_Sensor_Value_Task(void * pvParameters)
 {
 	BaseType_t status;
+	HAL_StatusTypeDef r_status;
 
 	for(;;)
 	{
@@ -489,8 +490,8 @@ void Transmit_Temp_Sensor_Value_Task(void * pvParameters)
 						// We were able to obtain the semaphore and can now access the
 						// shared resource.
 
-						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &HEAT_SENSOR_ID, 1);
-						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&temp_sensor_i2c, sizeof(temp_sensor_i2c));
+						r_status = HAL_I2C_Master_Transmit(&i2c, slave_i2c_addr << 1, &HEAT_SENSOR_ID, 1, 0xffffffff);
+						r_status = HAL_I2C_Master_Transmit(&i2c, slave_i2c_addr << 1, (uint8_t *)&temp_sensor_i2c, sizeof(temp_sensor_i2c), 0xffffffff);
 
 						// We have finished accessing the shared resource.  Release the
 						// semaphore.
@@ -506,6 +507,7 @@ void Transmit_Potensiometer_Value_Task(void * pvParameters)
 {
 
 	BaseType_t status;
+	HAL_StatusTypeDef r_status;
 
 	for(;;)
 	{
@@ -523,8 +525,8 @@ void Transmit_Potensiometer_Value_Task(void * pvParameters)
 						// We were able to obtain the semaphore and can now access the
 						// shared resource.
 
-						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, &POTENSIOMETER_ID, 1);
-						HAL_I2C_Master_Transmit_DMA(&i2c, slave_i2c_addr << 1, (uint8_t *)&potensiometer_i2c, sizeof(potensiometer_i2c));
+						r_status = HAL_I2C_Master_Transmit(&i2c, slave_i2c_addr << 1, &POTENSIOMETER_ID, 1, 0xffffffff);
+						r_status = HAL_I2C_Master_Transmit(&i2c, slave_i2c_addr << 1, (uint8_t *)&potensiometer_i2c, sizeof(potensiometer_i2c), 0xffffffff);
 
 						// We have finished accessing the shared resource.  Release the
 						// semaphore.
