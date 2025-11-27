@@ -20,7 +20,7 @@ char uart_buffer[50] = {0};
 volatile uint32_t potensiometer_value, heat_sensor_value, intermediate = 0;;
 volatile uint16_t potensiometer_i2c, temp_sensor_i2c = 0;
 volatile double potensiometer, temp_sensor, int_val = 0;
-uint8_t slave_i2c_addr = 0xBA;
+uint8_t slave_i2c_addr = 0x3A;
 uint8_t HEAT_SENSOR_ID = 0;
 uint8_t POTENSIOMETER_ID = 1;
 

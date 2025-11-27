@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Delete resource &apos;Sensor_Capturing_via_Microcontrollers/Middlewares/Third_Party/mbedTLS&apos;" deleteContents="false" description="Delete resource &apos;Sensor_Capturing_via_Microcontrollers/Middlewares/Third_Party/mbedTLS&apos;" element1="/Sensor_Capturing_via_Microcontrollers/Middlewares/Third_Party/mbedTLS" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1764152440314"/>
+</session>

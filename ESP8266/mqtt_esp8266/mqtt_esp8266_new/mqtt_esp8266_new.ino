@@ -150,7 +150,7 @@ void loop() {
   if(new_dht11_humidity_data)
   {
     // Send the Potensiometer's value to the MQTT server.
-    snprintf (msg, MSG_BUFFER_SIZE, "The temperature from the DHT11 sensor is #%ld °C", received_dht11_humidity);
+    snprintf (msg, MSG_BUFFER_SIZE, "The humidity from the DHT11 sensor is #%ld \%", received_dht11_humidity);
     client.publish("device/dht11", msg);
 
     new_dht11_humidity_data = false;
