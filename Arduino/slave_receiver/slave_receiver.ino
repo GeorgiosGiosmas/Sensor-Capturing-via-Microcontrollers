@@ -10,6 +10,7 @@
 
 // This example code is in the public domain.
 
+#include <avr/wdt.h>
 #include <Wire.h>
 #include <DHT11.h>
 
@@ -28,47 +29,50 @@ DHT11 dht11 = DHT11(4);
 void setup() 
 {
   Serial.begin(115200);                     // start serial for output
-  Wire.begin(I2C_SLAVE);          // new syntax: join i2c bus (address required for slave)
+  Wire.begin(I2C_SLAVE);                    // new syntax: join i2c bus (address required for slave)
   Wire.setClock(100000);
   Wire.onReceive(receiveEvent);             // register event
+  wdt_enable(WDTO_4S);                      // Enable watchdog (2-second timeout)
 }
 
 // Loop functions keeps sending the received values from STM32F407G Disc board to the Generic ESP8266 module..
 void loop() 
 {
 
+  wdt_reset();
+
   if(new_temp_data)
   {
+
+    new_temp_data = false;
+
     // Send the Temperature's sensor value.
     Serial.write(0x0);                                            // First send the id byte
     Serial.write((received_temp_data >> 8) & 0xFF);               // Send the upper byte 
     Serial.write(received_temp_data & 0xFF);                      // Send the lower byte
-
-    new_temp_data = false;
+    
   }
-
-  delay(20);
 
   if(new_pot_data)
   {
+
+    new_pot_data = false;
+
     // Send the Potensiometer's value.
     Serial.write(0x1);                                            // First send the id byte
     Serial.write((received_potensiometer_data >> 8) & 0xFF);      // Send the upper byte 
     Serial.write(received_potensiometer_data & 0xFF);             // Send the lower byte
-
-    new_pot_data = false;
-
+    
     // Adjust the brightness of the local LED.
     brightness = ((received_potensiometer_data/100.0)/3.3)*255.0;
-    Serial.print("Brightness: ");
-    Serial.println(brightness);
-
     analogWrite(LED_PWM_PIN, brightness);
   }
 
   if(new_dht11_data)
   {
     
+    new_dht11_data = false;
+
     result = dht11.readTemperatureHumidity(dht11_temperature, dht11_humidity);
 
     // Send DHT11's Temperature value.
@@ -80,8 +84,6 @@ void loop()
     Serial.write(0x3);                                            // First send the id byte
     Serial.write((dht11_humidity >> 8) & 0xFF);               // Send the upper byte 
     Serial.write(dht11_humidity & 0xFF);                     // Send the lower byte
-
-    new_dht11_data = false;
   }
 
   DHT11_new_data();
@@ -91,16 +93,13 @@ void loop()
 // Function that executes whenever data is received from master.
 // This function is registered as an event, see setup().
 void receiveEvent(size_t howmany) {
-
-  Serial.println("New I2C data arived");
-  (void)howmany;
-
-  if(Wire.available() == 1)
+ 
+  if(howmany == 1)
   {
     data_id = Wire.read();  
   }
 
-  if(Wire.available() == 2)
+  if(howmany == 2)
   {
     if(data_id == 0)
     {

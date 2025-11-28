@@ -23,8 +23,8 @@
 
 // Update these with values suitable for your network.
 
-const char* ssid = "Giosmas";
-const char* password = "20012004";
+const char* ssid = "Your SSID";
+const char* password = "The password of your SSID";
 const char* mqtt_server = "54.36.178.49"; // test.mosquitto.org IP -> This is a test server.
 
 WiFiClient espClient;
@@ -103,10 +103,13 @@ void setup() {
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+  ESP.wdtEnable(10000);
 }
 
 void loop() {
 
+  ESP.wdtFeed();
+  
   if (!client.connected()) {
     reconnect();
   }
